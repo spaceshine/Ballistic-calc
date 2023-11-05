@@ -15,6 +15,29 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    float v0, alpha, beta, u_value, gamma, mu, m, dt=0.01;
+    float anchor_alpha=0.0, anchor_beta=0.0, anchor_gamma=0.0;
+    float step_alpha=1.0, step_beta=1.0, step_gamma=1.0;
+
+    float get_alpha();
+    float get_beta();
+    float get_gamma();
+
+private slots:
+    void on_pushButton_start_clicked();
+
+    void on_edt_alpha_valueChanged();
+
+    void on_edt_beta_valueChanged();
+
+    void on_edt_gamma_valueChanged();
+
+    void on_precise_alpha_clicked();
+
+    void on_precise_beta_clicked();
+
+    void on_precise_gamma_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
