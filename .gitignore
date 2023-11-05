@@ -37,6 +37,8 @@ Thumbs.db
 
 # qtcreator generated files
 *.pro.user*
+*.pro.user
+*.user
 
 # xemacs temporary files
 *.flc
@@ -70,4 +72,4 @@ Thumbs.db
 # --------
 *.dll
 *.exe
-
+Ballistic-calculator.pro.user
