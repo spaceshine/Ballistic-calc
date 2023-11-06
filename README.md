@@ -1,4 +1,5 @@
 # Ballistic-calculator
 Проект по информатике. Продвинутый баллистический калькулятор для артиллерийского расчета с учетом скорости ветра, сопротивления воздуха, ускорения Кориолиса.
 
-![image](https://github.com/spaceshine/Ballistic-calculator/assets/80642434/92469a77-eb50-4959-9542-2458c11e973e)
+![image](https://github.com/spaceshine/Ballistic-calculator/assets/80642434/fa550f95-351f-4737-a088-a9263be55c78)
+
