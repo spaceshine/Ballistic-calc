@@ -2,12 +2,22 @@
 #include "ui_mainwindow.h"
 #include "computation.h"
 #include <QString>
+#include <Q3DScatter>
+#include <cmath>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    chart = new Q3DScatter;
+    QWidget *container = QWidget::createWindowContainer(chart);
+    ui->vis_chart->addWidget(container, 1);
+    chart->setAspectRatio(1.0);
+    chart->setHorizontalAspectRatio(1.0);
+    chart->setShadowQuality(QAbstract3DGraph::ShadowQualityNone); // отключаем тени
+    chart->show();
 }
 
 MainWindow::~MainWindow()
@@ -31,16 +41,54 @@ void MainWindow::on_pushButton_start_clicked()
     Vec u = Vec(u_value, 0.0, gamma);
 
     Simulation result = compute(v, u, mu, m, dt);
-    P end = P(result.points.back().x, result.points.back().y, 0.0);
+    P end = P(result.data.back().x(), result.data.back().z(), 0.0);
     AVec v_end = result.v_end;
     float alpha_end = asin(abs(v_end.z/v_end.length()));
 
     ui->label_end->setText("(" + QString::number(end.x, 'f', 1) + ", " + QString::number(end.y, 'f', 1) + ")");
-    ui->label_time->setText(QString::number(result.points.size()*dt, 'f', 1));
+    ui->label_time->setText(QString::number(result.data.size()*dt, 'f', 1));
     ui->label_distance->setText(QString::number(AVec(end).length(), 'f', 1));
     ui->label_max_h->setText(QString::number(result.z_max, 'f', 1));
     ui->label_v_end->setText(QString::number(result.v_end.length(), 'f', 1));
     ui->label_alpha_end->setText(QString::number(rad_to_deg(alpha_end), 'f', 1) + "°");
+
+    // Убираем предыдущий график
+    if (! ui->btn_fixed->isChecked()){
+        for (auto ser : chart->seriesList()){
+            chart->removeSeries(ser);
+        }
+    } else {
+        chart->seriesList().at(0)->setBaseColor(Qt::green);
+    }
+
+    // Добавляем точки
+    series = new QScatter3DSeries;
+    series->dataProxy()->addItems(result.data);
+    series->setBaseColor(Qt::red);
+    chart->addSeries(series);
+
+    // Добавляем точку старта на график отдельным цветом
+    start_point = new QScatter3DSeries;
+    QScatterDataArray start_p_data;
+    start_p_data << QVector3D(0.0, 0.0, 0.0);
+    start_point->setBaseColor(Qt::black);
+    start_point->setItemSize(series->itemSize()*1.2f);
+    start_point->dataProxy()->addItems(start_p_data);
+    chart->addSeries(start_point);
+
+    // Настраиваем оси и показываем график
+    float new_range = std::max(std::max(abs(end.x), abs(end.y)), abs(result.z_max));
+    if (ui->btn_fixed->isChecked()){
+        range = std::max(range, new_range);
+    } else {
+        range = new_range;
+    }
+    chart->axisX()->setRange(-range, range);
+    chart->axisY()->setRange(0, range);
+    chart->axisZ()->setRange(0, range);
+    chart->setAspectRatio(2);
+    chart->setHorizontalAspectRatio(2);
+    chart->show();
 }
 
 

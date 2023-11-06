@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <Q3DScatter>
 
 
 const float PI = 3.1415;
@@ -116,13 +117,8 @@ float deg_to_rad(float deg){
 
 const AVec G = AVec(0.0, 0.0, -9.81);
 
-struct P2D{
-    float x;
-    float y;
-};
-
 struct Simulation{
-    std::vector<P2D> points;
+    QScatterDataArray data;
     float z_max;
     AVec v_end;
 };
@@ -132,7 +128,7 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
     P r = P();
     AVec v = v0.to_avec();
     AVec v_;
-    std::vector<P2D> points;
+    QScatterDataArray data;
     float z_max = 0;
 
     // std::cout << "SIMULATION" << std::endl;
@@ -145,9 +141,14 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
         v_ = v + u.to_avec()*(-1); // скорость относительно воздуха (ветра)
         v = v + (G + v_*(-mu*v_.length()/m))*dt;
 
-        points.push_back(P2D{r.x, r.y});
-        if (r.z > z_max){z_max = r.z;}
+        data << QVector3D(r.x, r.z, r.y); // приколы Q3DScatter (y -> z)
+
+        if (r.z > z_max){ // h_max
+            z_max = r.z;
+        }
+
     } while(r.z > 0);
-    return Simulation{points, z_max, v};
+
+    return Simulation{data, z_max, v};
 }
 
