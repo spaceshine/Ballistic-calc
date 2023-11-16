@@ -36,6 +36,8 @@ void MainWindow::on_pushButton_start_clicked()
     mu = ui->edt_mu->text().toFloat();
     m = ui->edt_m->text().toFloat();
     dt = ui->edt_dt->text().toFloat();
+    target_x = ui->edt_target_x->text().toFloat();
+    target_y = ui->edt_target_y->text().toFloat();
 
     Vec v = Vec(v0, alpha, beta);
     Vec u = Vec(u_value, 0.0, gamma);
@@ -76,8 +78,18 @@ void MainWindow::on_pushButton_start_clicked()
     start_point->dataProxy()->addItems(start_p_data);
     chart->addSeries(start_point);
 
+    // Добавляем точку цели на график отдельным цветом
+    target_point = new QScatter3DSeries;
+    QScatterDataArray target_p_data;
+    target_p_data << QVector3D(target_y, 0.0, target_x);
+    target_point->setBaseColor(Qt::darkRed);
+    target_point->setItemSize(series->itemSize()*1.2f);
+    target_point->dataProxy()->addItems(target_p_data);
+    chart->addSeries(target_point);
+
     // Настраиваем оси и показываем график
     float new_range = std::max(std::max(abs(end.x), abs(end.y)), abs(result.z_max));
+    new_range = std::max(std::max(abs(target_x), abs(target_y)), new_range);
     if (ui->btn_fixed->isChecked()){
         range = std::max(range, new_range);
     } else {

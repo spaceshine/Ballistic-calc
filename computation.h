@@ -115,7 +115,7 @@ float deg_to_rad(float deg){
 }
 
 
-const AVec G = AVec(0.0, 0.0, -9.81);
+const static AVec G = AVec(0.0, 0.0, -9.81);
 
 struct Simulation{
     QScatterDataArray data;
@@ -131,17 +131,13 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
     QScatterDataArray data;
     float z_max = 0;
 
-    // std::cout << "SIMULATION" << std::endl;
-
     do{
-        r = r + v*dt;
+        r = r + v*dt;  // Вычисляем дифференциал радиус вектора
 
-        //std::cout << r << std::endl;
-        // используем вязкое трение при больших скоростях |F_c| = mu*(v^2)
-        v_ = v + u.to_avec()*(-1); // скорость относительно воздуха (ветра)
-        v = v + (G + v_*(-mu*v_.length()/m))*dt;
+        v_ = v + u.to_avec()*(-1); // Скорость относительно воздуха (ветра)
+        v = v + (G + v_*(-mu*v_.length()/m))*dt; // Вычисляем дифференциал скорости
 
-        data << QVector3D(r.x, r.z, r.y); // приколы Q3DScatter (y -> z)
+        data << QVector3D(r.x, r.z, r.y); // Особенности Q3DScatter (y -> z)
 
         if (r.z > z_max){ // h_max
             z_max = r.z;
@@ -151,4 +147,37 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
 
     return Simulation{data, z_max, v};
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
