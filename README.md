@@ -3,3 +3,5 @@
 
 ![image](https://github.com/spaceshine/Ballistic-calculator/assets/80642434/fa550f95-351f-4737-a088-a9263be55c78)
 
+![image](How_to_use.png)
+
