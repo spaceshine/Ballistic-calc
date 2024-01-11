@@ -24,7 +24,7 @@ public:
     Q3DScatter *chart;
     QScatter3DSeries *series = new QScatter3DSeries, *start_point = new QScatter3DSeries, *target_point = new QScatter3DSeries;
 
-
+    void start(bool);
     float get_alpha();
     float get_beta();
     float get_gamma();
@@ -43,6 +43,8 @@ private slots:
     void on_precise_beta_clicked();
 
     void on_precise_gamma_clicked();
+
+    void on_pushButton_optimal_clicked();
 
 private:
     Ui::MainWindow *ui;

@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "computation.h"
 #include <QString>
+#include <QRegExp>
 #include <Q3DScatter>
 #include <cmath>
 
@@ -28,16 +29,34 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_start_clicked()
 {
-    v0 = ui->edt_v0->text().toFloat();
-    alpha = deg_to_rad(get_alpha());
-    beta = deg_to_rad(get_beta());
-    u_value = ui->edt_u->text().toFloat();
-    gamma = deg_to_rad(get_gamma());
-    mu = ui->edt_mu->text().toFloat();
-    m = ui->edt_m->text().toFloat();
-    dt = ui->edt_dt->text().toFloat();
+    start(true);
+}
+
+void MainWindow::start(bool from_gui_inputs){
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
+
+    // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
+    if (from_gui_inputs && !ui->btn_optres->isChecked()){
+        v0 = ui->edt_v0->text().toFloat();
+        alpha = deg_to_rad(get_alpha());
+        beta = deg_to_rad(get_beta());
+        u_value = ui->edt_u->text().toFloat();
+        gamma = deg_to_rad(get_gamma());
+        mu = ui->edt_mu->text().toFloat();
+        m = ui->edt_m->text().toFloat();
+        dt = ui->edt_dt->text().toFloat();
+    } else {
+        QStringList params_list = ui->edt_optres->text().split(";");
+        v0 = params_list[0].toFloat();
+        alpha = deg_to_rad(params_list[1].toFloat());
+        beta = deg_to_rad(params_list[2].toFloat());
+        u_value = params_list[3].toFloat();
+        gamma = deg_to_rad(params_list[4].toFloat());
+        mu = params_list[5].toFloat();
+        m = params_list[6].toFloat();
+        dt = params_list[7].toFloat();
+    }
 
     Vec v = Vec(v0, alpha, beta);
     Vec u = Vec(u_value, 0.0, gamma);
@@ -81,7 +100,7 @@ void MainWindow::on_pushButton_start_clicked()
     // Добавляем точку цели на график отдельным цветом
     target_point = new QScatter3DSeries;
     QScatterDataArray target_p_data;
-    target_p_data << QVector3D(target_y, 0.0, target_x);
+    target_p_data << QVector3D(target_x, 0.0, target_y);
     target_point->setBaseColor(Qt::darkRed);
     target_point->setItemSize(series->itemSize()*1.2f);
     target_point->dataProxy()->addItems(target_p_data);
@@ -169,5 +188,61 @@ void MainWindow::on_precise_gamma_clicked()
         step_gamma = 1.0;
         MainWindow::on_edt_gamma_valueChanged();
     }
+}
+
+
+void MainWindow::on_pushButton_optimal_clicked()
+{
+    // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
+    if (!ui->btn_optres->isChecked()){
+        v0 = ui->edt_v0->text().toFloat();
+        alpha = deg_to_rad(get_alpha());
+        beta = deg_to_rad(get_beta());
+        u_value = ui->edt_u->text().toFloat();
+        gamma = deg_to_rad(get_gamma());
+        mu = ui->edt_mu->text().toFloat();
+        m = ui->edt_m->text().toFloat();
+        dt = ui->edt_dt->text().toFloat();
+    } else {
+        QStringList params_list = ui->edt_optres->text().split(";");
+        v0 = params_list[0].toFloat();
+        alpha = deg_to_rad(params_list[1].toFloat());
+        beta = deg_to_rad(params_list[2].toFloat());
+        u_value = params_list[3].toFloat();
+        gamma = deg_to_rad(params_list[4].toFloat());
+        mu = params_list[5].toFloat();
+        m = params_list[6].toFloat();
+        dt = params_list[7].toFloat();
+    }
+    target_x = ui->edt_target_x->text().toFloat();
+    target_y = ui->edt_target_y->text().toFloat();
+    Vec u = Vec(u_value, 0.0, gamma);
+
+    ext_params ep;
+    ep.dt = dt;
+    ep.m = m;
+    ep.mu = mu;
+    ep.u = u;
+
+    grad_params gp;
+    gp.da = ui->edt_da->text().toFloat();
+    gp.db = ui->edt_db->text().toFloat();
+    gp.stepa = ui->edt_astep->text().toFloat();
+    gp.stepb = ui->edt_bstep->text().toFloat();
+
+    grad_return opt_params;
+    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, 0.0), ep);
+    std::cout << opt_params.alpha << " " << opt_params.beta << " " << opt_params.func_value << std::endl;
+
+    // ТОЧНОСТЬ!!
+    ui->edt_alpha->setValue(rad_to_deg(opt_params.alpha));
+    ui->edt_beta->setValue(rad_to_deg(opt_params.beta));
+    QString params_string = QString::number(v0) + ";" + QString::number(rad_to_deg(opt_params.alpha), 'g', 5) + ";" + QString::number(rad_to_deg(opt_params.beta), 'g', 5) + "; "
+            + QString::number(u_value) + ";" + QString::number(rad_to_deg(gamma), 'g', 5) + ";" + QString::number(mu) + ";" + QString::number(m) + ";" + QString::number(dt);
+    ui->edt_optres->setText(params_string);
+
+    std::cout << params_string.toStdString() << std::endl;
+
+    start(false);
 }
 

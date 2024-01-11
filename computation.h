@@ -20,6 +20,10 @@ public:
     }
     ~P() = default;
 
+    float distance_xy(P other){
+        return sqrt(pow(this->x - other.x, 2) + pow(this->y - other.y, 2));
+    }
+
     friend std::ostream& operator<<(std::ostream &out, const P &p){return p.print(out);}
     virtual std::ostream& print(std::ostream& out) const
     {
@@ -149,7 +153,80 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
 }
 
 
+struct ext_params{
+    Vec u;
+    float mu;
+    float m;
+    float dt;
+};
+struct grad_params{
+    float da;
+    float db;
+    float stepa;
+    float stepb;
+    long maxiter=2000;
+};
 
+// Функция вычисляет отклонение от целевой точки при заданных параметрах броска
+float target_error(float v0, float alpha, float beta, P target, ext_params ep){
+    P r = P();
+    AVec v = Vec(v0, alpha, beta).to_avec();
+    AVec v_;
+
+    do{
+        r = r + v*(ep.dt);  // Вычисляем дифференциал радиус вектора
+
+        v_ = v + (ep.u).to_avec()*(-1); // Скорость относительно воздуха (ветра)
+        v = v + (G + v_*(-(ep.mu)*v_.length()/(ep.m)))*(ep.dt); // Вычисляем дифференциал скорости
+    } while(r.z > 0);
+    return r.distance_xy(target);
+}
+
+// Реализация алгоритма градиентного спуска для действительной функции от 2-х переменных
+struct grad_return{
+    float alpha;
+    float beta;
+    float func_value;
+};
+
+grad_return grad(float da, float db, float v0, float alpha, float beta, P target, ext_params ep){
+    float I0 = target_error(v0, alpha, beta, target, ep);
+    float dIda = (target_error(v0, alpha+da, beta, target, ep) - I0) / da; // Частная производная по alpha
+    float dIdb = (target_error(v0, alpha, beta+db, target, ep) - I0) / db; // Частная производная по beta
+    return {dIda, dIdb, I0};
+}
+
+float aborder_lower = 0.174533; // ~ 10 градусов
+float aborder_upper = 1.5708;   // ~ 90 градусов
+float bborder_lower = -1.5708;  // ~ -90 градусов
+float bborder_upper = 1.5708;   // ~ 90 градусов
+
+grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, P target, ext_params ep){
+    float aa = alpha, bb = beta;
+    grad_return gradI;
+    // Итеративно спускаемся по градиенту (также вводим maxiter, чтобы алгоритм не работал
+    // бесконечно при, например, невозможности попадания в цель)
+    for(long i = 0; i < gp.maxiter; i++){
+        gradI = grad(gp.da, gp.db, v0, aa, bb, target, ep); // Вычисляем градиент функции отклонения
+        // Изменяем значение против градиента, чтобы минимизировать функцию
+        aa = aa - gp.stepa * gradI.alpha;
+        bb = bb - gp.stepb * gradI.beta;
+
+        // Предотвращение выхода за границы допустимых углов
+        if (aa < aborder_lower) {aa = aborder_lower;}
+        if (aa > aborder_upper) {aa = aborder_upper;}
+        if (bb < bborder_lower) {bb = bborder_lower;}
+        if (bb > bborder_upper) {bb = bborder_upper;}
+
+        // std::cout << "iteration[" << i << "] " << aa << " " << bb << " " << gradI.func_value << std::endl;
+
+        // Критерий остановки
+        if (gradI.func_value < 0.1f){
+            return {aa, bb, gradI.func_value};
+        }
+    }
+    return {aa, bb, gradI.func_value};
+}
 
 
 
