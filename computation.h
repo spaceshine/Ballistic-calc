@@ -215,7 +215,7 @@ float bborder_upper = 1.5708;   // ~ 90 градусов
 
 grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, P target, ext_params ep, std::function<void(int)> progress){
     float aa = alpha, bb = beta;
-    grad_return gradI;
+    grad_return gradI{alpha, beta, 1e6};
     // Итеративно спускаемся по градиенту (также вводим maxiter, чтобы алгоритм не работал
     // бесконечно при, например, невозможности попадания в цель)
     for(long i = 0; i < gp.maxiter; i++){
