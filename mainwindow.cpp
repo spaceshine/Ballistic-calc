@@ -71,11 +71,16 @@ void MainWindow::start(bool from_gui_inputs){
     } else{
         h_end = 0.0f;
     }
+
+    ui->progressBar->setValue(10); // progressBar
+
     Simulation result = compute(v, u, mu, m, dt, h0, h_end);
     P end = P(result.data.back().x(), result.data.back().z(), 0.0);
     if (ui->btn_is_user_h->isChecked()){end.z = target_h;}
     AVec v_end = result.v_end;
     float alpha_end = asin(abs(v_end.z/v_end.length()));
+
+    ui->progressBar->setValue(90); // progressBar
 
     ui->label_end->setText("(" + QString::number(end.x, 'f', 1) + ", " + QString::number(end.y, 'f', 1) + ")");
     ui->label_time->setText(QString::number(result.data.size()*dt, 'f', 1));
@@ -137,6 +142,9 @@ void MainWindow::start(bool from_gui_inputs){
     chart->axisZ()->setRange(0, range);
     chart->setAspectRatio(2);
     chart->setHorizontalAspectRatio(2);
+
+    ui->progressBar->setValue(100); // progressBar
+
     chart->show();
 }
 
@@ -219,6 +227,10 @@ void MainWindow::on_precise_gamma_clicked()
     }
 }
 
+void MainWindow::progress(int procents){
+    ui->progressBar->setValue(procents);
+}
+
 
 void MainWindow::on_pushButton_optimal_clicked()
 {
@@ -248,7 +260,12 @@ void MainWindow::on_pushButton_optimal_clicked()
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
     target_h = ui->edt_target_h->text().toFloat();
+    if (ui->btn_is_user_h->isChecked()){
+        h_end = target_h;
+    }
     Vec u = Vec(u_value, 0.0, gamma);
+
+    ui->progressBar->setValue(0); // progressBar
 
     ext_params ep;
     ep.dt = dt;
@@ -256,6 +273,7 @@ void MainWindow::on_pushButton_optimal_clicked()
     ep.mu = mu;
     ep.u = u;
     ep.h0 = h0;
+    ep.h_end = h_end;
 
     grad_params gp;
     gp.da = ui->edt_da->text().toFloat();
@@ -264,7 +282,7 @@ void MainWindow::on_pushButton_optimal_clicked()
     gp.stepb = ui->edt_bstep->text().toFloat();
 
     grad_return opt_params;
-    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, target_h), ep);
+    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, target_h), ep, [this](int procents){progress(procents);});
     //std::cout << opt_params.alpha << " " << opt_params.beta << " " << opt_params.func_value << std::endl;
 
     ui->edt_alpha->setValue(rad_to_deg(opt_params.alpha));

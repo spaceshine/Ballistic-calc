@@ -16,7 +16,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    float h0, v0, alpha, beta, u_value, gamma, mu, m, dt=0.01;
+    float h0, v0, alpha, beta, u_value, gamma, mu, m, dt=0.01, h_end;
     float target_x, target_y, target_h;
     float anchor_alpha=0.0, anchor_beta=0.0, anchor_gamma=0.0;
     float step_alpha=1.0, step_beta=1.0, step_gamma=1.0;
@@ -30,6 +30,7 @@ public:
     float get_alpha();
     float get_beta();
     float get_gamma();
+    void progress(int);
 
 private slots:
     void on_pushButton_start_clicked();

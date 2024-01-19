@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <functional>
 #include <Q3DScatter>
 
 
@@ -152,7 +153,7 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt, float h0, float h
             cannot_bump = false;
         }
 
-    } while(r.z > h_end || cannot_bump);
+    } while((r.z > 0.0) && (r.z > h_end || cannot_bump));
 
     return Simulation{data, z_max, v};
 }
@@ -164,6 +165,7 @@ struct ext_params{
     float m;
     float dt;
     float h0;
+    float h_end;
 };
 struct grad_params{
     float da;
@@ -178,13 +180,17 @@ float target_error(float v0, float alpha, float beta, P target, ext_params ep){
     P r = P(0, 0, ep.h0);
     AVec v = Vec(v0, alpha, beta).to_avec();
     AVec v_;
+    bool cannot_bump=true;
 
     do{
         r = r + v*(ep.dt);  // Вычисляем дифференциал радиус вектора
 
         v_ = v + (ep.u).to_avec()*(-1); // Скорость относительно воздуха (ветра)
         v = v + (G + v_*(-(ep.mu)*v_.length()/(ep.m)))*(ep.dt); // Вычисляем дифференциал скорости
-    } while(r.z > target.z);
+        if (r.z > ep.h_end){
+            cannot_bump = false;
+        }
+    } while((r.z > 0.0) && (r.z > ep.h_end || cannot_bump));
     return r.distance_xy(target);
 }
 
@@ -202,12 +208,12 @@ grad_return grad(float da, float db, float v0, float alpha, float beta, P target
     return {dIda, dIdb, I0};
 }
 
-float aborder_lower = 0.174533; // ~ 10 градусов
+float aborder_lower = -1.5708; // ~ -10 градусов
 float aborder_upper = 1.5708;   // ~ 90 градусов
 float bborder_lower = -1.5708;  // ~ -90 градусов
 float bborder_upper = 1.5708;   // ~ 90 градусов
 
-grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, P target, ext_params ep){
+grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, P target, ext_params ep, std::function<void(int)> progress){
     float aa = alpha, bb = beta;
     grad_return gradI;
     // Итеративно спускаемся по градиенту (также вводим maxiter, чтобы алгоритм не работал
@@ -225,7 +231,7 @@ grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, 
         if (bb > bborder_upper) {bb = bborder_upper;}
 
         // std::cout << "iteration[" << i << "] " << aa << " " << bb << " " << gradI.func_value << std::endl;
-
+        progress(int(float(i)/gp.maxiter*100));
         // Критерий остановки
         if (gradI.func_value < 0.1f){
             return {aa, bb, gradI.func_value};
