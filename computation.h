@@ -128,12 +128,13 @@ struct Simulation{
 };
 
 
-Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
-    P r = P();
+Simulation compute(Vec v0, Vec u, float mu, float m, float dt, float h0, float h_end=0){
+    P r = P(0, 0, h0);
     AVec v = v0.to_avec();
     AVec v_;
     QScatterDataArray data;
     float z_max = 0;
+    bool cannot_bump=true;
 
     do{
         r = r + v*dt;  // Вычисляем дифференциал радиус вектора
@@ -147,7 +148,11 @@ Simulation compute(Vec v0, Vec u, float mu, float m, float dt){
             z_max = r.z;
         }
 
-    } while(r.z > 0);
+        if (r.z > h_end){
+            cannot_bump = false;
+        }
+
+    } while(r.z > h_end || cannot_bump);
 
     return Simulation{data, z_max, v};
 }
@@ -158,6 +163,7 @@ struct ext_params{
     float mu;
     float m;
     float dt;
+    float h0;
 };
 struct grad_params{
     float da;
@@ -169,7 +175,7 @@ struct grad_params{
 
 // Функция вычисляет отклонение от целевой точки при заданных параметрах броска
 float target_error(float v0, float alpha, float beta, P target, ext_params ep){
-    P r = P();
+    P r = P(0, 0, ep.h0);
     AVec v = Vec(v0, alpha, beta).to_avec();
     AVec v_;
 
@@ -178,7 +184,7 @@ float target_error(float v0, float alpha, float beta, P target, ext_params ep){
 
         v_ = v + (ep.u).to_avec()*(-1); // Скорость относительно воздуха (ветра)
         v = v + (G + v_*(-(ep.mu)*v_.length()/(ep.m)))*(ep.dt); // Вычисляем дифференциал скорости
-    } while(r.z > 0);
+    } while(r.z > target.z);
     return r.distance_xy(target);
 }
 

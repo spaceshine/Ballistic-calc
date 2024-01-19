@@ -16,15 +16,17 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    float v0, alpha, beta, u_value, gamma, mu, m, dt=0.01;
-    float target_x, target_y;
+    float h0, v0, alpha, beta, u_value, gamma, mu, m, dt=0.01;
+    float target_x, target_y, target_h;
     float anchor_alpha=0.0, anchor_beta=0.0, anchor_gamma=0.0;
     float step_alpha=1.0, step_beta=1.0, step_gamma=1.0;
     float range=1.0;
+    int animation_counter;
     Q3DScatter *chart;
     QScatter3DSeries *series = new QScatter3DSeries, *start_point = new QScatter3DSeries, *target_point = new QScatter3DSeries;
 
     void start(bool);
+    void animation();
     float get_alpha();
     float get_beta();
     float get_gamma();

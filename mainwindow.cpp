@@ -4,6 +4,7 @@
 #include <QString>
 #include <QRegExp>
 #include <Q3DScatter>
+#include <QTimer>
 #include <cmath>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -35,9 +36,11 @@ void MainWindow::on_pushButton_start_clicked()
 void MainWindow::start(bool from_gui_inputs){
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
+    target_h = ui->edt_target_h->text().toFloat();
 
     // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
     if (from_gui_inputs && !ui->btn_optres->isChecked()){
+        h0 = ui->edt_h0->text().toFloat();
         v0 = ui->edt_v0->text().toFloat();
         alpha = deg_to_rad(get_alpha());
         beta = deg_to_rad(get_beta());
@@ -48,21 +51,29 @@ void MainWindow::start(bool from_gui_inputs){
         dt = ui->edt_dt->text().toFloat();
     } else {
         QStringList params_list = ui->edt_optres->text().split(";");
-        v0 = params_list[0].toFloat();
-        alpha = deg_to_rad(params_list[1].toFloat());
-        beta = deg_to_rad(params_list[2].toFloat());
-        u_value = params_list[3].toFloat();
-        gamma = deg_to_rad(params_list[4].toFloat());
-        mu = params_list[5].toFloat();
-        m = params_list[6].toFloat();
-        dt = params_list[7].toFloat();
+        h0 = params_list[0].toFloat();
+        v0 = params_list[1].toFloat();
+        alpha = deg_to_rad(params_list[2].toFloat());
+        beta = deg_to_rad(params_list[3].toFloat());
+        u_value = params_list[4].toFloat();
+        gamma = deg_to_rad(params_list[5].toFloat());
+        mu = params_list[6].toFloat();
+        m = params_list[7].toFloat();
+        dt = params_list[8].toFloat();
     }
 
     Vec v = Vec(v0, alpha, beta);
     Vec u = Vec(u_value, 0.0, gamma);
 
-    Simulation result = compute(v, u, mu, m, dt);
+    float h_end;
+    if (ui->btn_is_user_h->isChecked()){
+        h_end = target_h;
+    } else{
+        h_end = 0.0f;
+    }
+    Simulation result = compute(v, u, mu, m, dt, h0, h_end);
     P end = P(result.data.back().x(), result.data.back().z(), 0.0);
+    if (ui->btn_is_user_h->isChecked()){end.z = target_h;}
     AVec v_end = result.v_end;
     float alpha_end = asin(abs(v_end.z/v_end.length()));
 
@@ -86,12 +97,19 @@ void MainWindow::start(bool from_gui_inputs){
     series = new QScatter3DSeries;
     series->dataProxy()->addItems(result.data);
     series->setBaseColor(Qt::red);
+    series->setSingleHighlightColor(Qt::green);
     chart->addSeries(series);
+
+//    QTimer *anim_timer = new QTimer(this);
+    animation_counter = 0;
+//    connect(anim_timer, SIGNAL(timeout()), this, SLOT(animation()));
+//    anim_timer->start(20);
+    QTimer::singleShot(50, this, [this]() { animation(); } );
 
     // Добавляем точку старта на график отдельным цветом
     start_point = new QScatter3DSeries;
     QScatterDataArray start_p_data;
-    start_p_data << QVector3D(0.0, 0.0, 0.0);
+    start_p_data << QVector3D(0.0, h0, 0.0);
     start_point->setBaseColor(Qt::black);
     start_point->setItemSize(series->itemSize()*1.2f);
     start_point->dataProxy()->addItems(start_p_data);
@@ -100,7 +118,7 @@ void MainWindow::start(bool from_gui_inputs){
     // Добавляем точку цели на график отдельным цветом
     target_point = new QScatter3DSeries;
     QScatterDataArray target_p_data;
-    target_p_data << QVector3D(target_x, 0.0, target_y);
+    target_p_data << QVector3D(target_x, target_h, target_y);
     target_point->setBaseColor(Qt::darkRed);
     target_point->setItemSize(series->itemSize()*1.2f);
     target_point->dataProxy()->addItems(target_p_data);
@@ -122,6 +140,17 @@ void MainWindow::start(bool from_gui_inputs){
     chart->show();
 }
 
+void MainWindow::animation()
+{
+    if (animation_counter > series->dataProxy()->itemCount()){
+        series->setSelectedItem(series->dataProxy()->itemCount()-1);
+        return;
+    }
+    series->setSelectedItem(animation_counter);
+    //std::cout << animation_counter << std::endl;
+    animation_counter+=std::max(int(0.05/dt), 1); // Шаг анимации - 0.05 секунды
+    QTimer::singleShot(50, [this]() { animation(); } );
+}
 
 float MainWindow::get_alpha(){return anchor_alpha + ui->edt_alpha->value()*step_alpha;}
 float MainWindow::get_beta(){return anchor_beta + ui->edt_beta->value()*step_beta;}
@@ -195,6 +224,7 @@ void MainWindow::on_pushButton_optimal_clicked()
 {
     // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
     if (!ui->btn_optres->isChecked()){
+        h0 = ui->edt_h0->text().toFloat();
         v0 = ui->edt_v0->text().toFloat();
         alpha = deg_to_rad(get_alpha());
         beta = deg_to_rad(get_beta());
@@ -205,17 +235,19 @@ void MainWindow::on_pushButton_optimal_clicked()
         dt = ui->edt_dt->text().toFloat();
     } else {
         QStringList params_list = ui->edt_optres->text().split(";");
-        v0 = params_list[0].toFloat();
-        alpha = deg_to_rad(params_list[1].toFloat());
-        beta = deg_to_rad(params_list[2].toFloat());
-        u_value = params_list[3].toFloat();
-        gamma = deg_to_rad(params_list[4].toFloat());
-        mu = params_list[5].toFloat();
-        m = params_list[6].toFloat();
-        dt = params_list[7].toFloat();
+        h0 = params_list[0].toFloat();
+        v0 = params_list[1].toFloat();
+        alpha = deg_to_rad(params_list[2].toFloat());
+        beta = deg_to_rad(params_list[3].toFloat());
+        u_value = params_list[4].toFloat();
+        gamma = deg_to_rad(params_list[5].toFloat());
+        mu = params_list[6].toFloat();
+        m = params_list[7].toFloat();
+        dt = params_list[8].toFloat();
     }
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
+    target_h = ui->edt_target_h->text().toFloat();
     Vec u = Vec(u_value, 0.0, gamma);
 
     ext_params ep;
@@ -223,6 +255,7 @@ void MainWindow::on_pushButton_optimal_clicked()
     ep.m = m;
     ep.mu = mu;
     ep.u = u;
+    ep.h0 = h0;
 
     grad_params gp;
     gp.da = ui->edt_da->text().toFloat();
@@ -231,17 +264,16 @@ void MainWindow::on_pushButton_optimal_clicked()
     gp.stepb = ui->edt_bstep->text().toFloat();
 
     grad_return opt_params;
-    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, 0.0), ep);
-    std::cout << opt_params.alpha << " " << opt_params.beta << " " << opt_params.func_value << std::endl;
+    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, target_h), ep);
+    //std::cout << opt_params.alpha << " " << opt_params.beta << " " << opt_params.func_value << std::endl;
 
-    // ТОЧНОСТЬ!!
     ui->edt_alpha->setValue(rad_to_deg(opt_params.alpha));
     ui->edt_beta->setValue(rad_to_deg(opt_params.beta));
-    QString params_string = QString::number(v0) + ";" + QString::number(rad_to_deg(opt_params.alpha), 'g', 5) + ";" + QString::number(rad_to_deg(opt_params.beta), 'g', 5) + "; "
+    QString params_string = QString::number(h0) + ";" + QString::number(v0) + ";" + QString::number(rad_to_deg(opt_params.alpha), 'g', 5) + ";" + QString::number(rad_to_deg(opt_params.beta), 'g', 5) + "; "
             + QString::number(u_value) + ";" + QString::number(rad_to_deg(gamma), 'g', 5) + ";" + QString::number(mu) + ";" + QString::number(m) + ";" + QString::number(dt);
     ui->edt_optres->setText(params_string);
 
-    std::cout << params_string.toStdString() << std::endl;
+    //std::cout << params_string.toStdString() << std::endl;
 
     start(false);
 }
