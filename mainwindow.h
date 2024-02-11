@@ -49,6 +49,8 @@ private slots:
 
     void on_pushButton_optimal_clicked();
 
+    void on_btn_grid_clicked();
+
 private:
     Ui::MainWindow *ui;
 };

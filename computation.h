@@ -240,11 +240,19 @@ grad_return gradient_descent(grad_params gp, float v0, float alpha, float beta, 
     return {aa, bb, gradI.func_value};
 }
 
+// Далее получаем поверхность отклика для анализа данных
 
+QScatterDataArray grid_target_error(float alpha_min, float alpha_max, float beta_min, float beta_max, float angle_step, float v0, P target, ext_params ep){
 
-
-
-
+    QScatterDataArray grid;
+    for (float alpha = alpha_min; alpha < alpha_max; alpha += angle_step){
+        for (float beta = beta_min; beta < beta_max; beta += angle_step){
+            float t_error = target_error(v0, alpha, beta, target, ep);
+            grid << QVector3D(alpha, t_error, beta); // Особенности Q3DScatter (y -> z)
+        }
+    }
+    return grid;
+}
 
 
 

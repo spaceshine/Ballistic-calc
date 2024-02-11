@@ -296,3 +296,81 @@ void MainWindow::on_pushButton_optimal_clicked()
     start(false);
 }
 
+
+void MainWindow::on_btn_grid_clicked()
+{
+    target_x = ui->edt_target_x->text().toFloat();
+    target_y = ui->edt_target_y->text().toFloat();
+    target_h = ui->edt_target_h->text().toFloat();
+
+    // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
+    if (!ui->btn_optres->isChecked()){
+        h0 = ui->edt_h0->text().toFloat();
+        v0 = ui->edt_v0->text().toFloat();
+        alpha = deg_to_rad(get_alpha());
+        beta = deg_to_rad(get_beta());
+        u_value = ui->edt_u->text().toFloat();
+        gamma = deg_to_rad(get_gamma());
+        mu = ui->edt_mu->text().toFloat();
+        m = ui->edt_m->text().toFloat();
+        dt = ui->edt_dt->text().toFloat();
+    } else {
+        QStringList params_list = ui->edt_optres->text().split(";");
+        h0 = params_list[0].toFloat();
+        v0 = params_list[1].toFloat();
+        alpha = deg_to_rad(params_list[2].toFloat());
+        beta = deg_to_rad(params_list[3].toFloat());
+        u_value = params_list[4].toFloat();
+        gamma = deg_to_rad(params_list[5].toFloat());
+        mu = params_list[6].toFloat();
+        m = params_list[7].toFloat();
+        dt = params_list[8].toFloat();
+    }
+
+    Vec v = Vec(v0, alpha, beta);
+    Vec u = Vec(u_value, 0.0, gamma);
+
+    float h_end;
+    if (ui->btn_is_user_h->isChecked()){
+        h_end = target_h;
+    } else{
+        h_end = 0.0f;
+    }
+
+    ui->progressBar->setValue(10); // progressBar
+
+    // float alpha_min, float alpha_max, float beta_min, float beta_max, float angle_step, float v0, P target, ext_params ep
+    QScatterDataArray grid = grid_target_error(deg_to_rad(1.0), deg_to_rad(90.0), -deg_to_rad(90.0), deg_to_rad(90.0), deg_to_rad(1.0), v0, P{target_x, target_y, target_h}, ext_params{u, mu, m, dt, h0, h_end});
+    // struct ext_params{Vec u;float mu;float m;float dt;float h0;float h_end;};
+
+
+    ui->progressBar->setValue(90); // progressBar
+
+    // Убираем предыдущий график
+    if (! ui->btn_fixed->isChecked()){
+        for (auto ser : chart->seriesList()){
+            chart->removeSeries(ser);
+        }
+    } else {
+        chart->seriesList().at(0)->setBaseColor(Qt::green);
+    }
+
+    // Добавляем точки
+    series = new QScatter3DSeries;
+    series->dataProxy()->addItems(grid);
+    series->setBaseColor(Qt::green);
+    series->setSingleHighlightColor(Qt::red);
+    chart->addSeries(series);
+
+    // Настраиваем оси и показываем график
+//    chart->axisX()->setRange(-range, range);
+//    chart->axisY()->setRange(0, range);
+//    chart->axisZ()->setRange(0, range);
+    chart->setAspectRatio(2);
+    chart->setHorizontalAspectRatio(2);
+
+    ui->progressBar->setValue(100); // progressBar
+
+    chart->show();
+}
+

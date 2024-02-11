@@ -807,6 +807,25 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btn_grid">
+          <property name="minimumSize">
+           <size>
+            <width>40</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>40</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>grid</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <spacer name="horizontalSpacer_9">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
