@@ -105,6 +105,7 @@ void MainWindow::start(bool from_gui_inputs){
     series->setSingleHighlightColor(Qt::green);
     chart->addSeries(series);
 
+    grid_mode = false;
     animation_counter = 0;
     animation_launched += 1;
     QTimer::singleShot(50, this, [this]() { animation(); } );
@@ -148,7 +149,7 @@ void MainWindow::start(bool from_gui_inputs){
 
 void MainWindow::animation()
 {
-    if (animation_counter > series->dataProxy()->itemCount() || animation_launched > 1){
+    if (animation_counter > series->dataProxy()->itemCount() || animation_launched > 1 || grid_mode){
         series->setSelectedItem(series->dataProxy()->itemCount()-1);
         animation_launched -= 1;
         return;
@@ -298,6 +299,7 @@ void MainWindow::on_pushButton_optimal_clicked()
 
 void MainWindow::on_btn_grid_clicked()
 {
+    grid_mode = true;
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
     target_h = ui->edt_target_h->text().toFloat();
@@ -339,7 +341,7 @@ void MainWindow::on_btn_grid_clicked()
     ui->progressBar->setValue(10); // progressBar
 
     // float alpha_min, float alpha_max, float beta_min, float beta_max, float angle_step, float v0, P target, ext_params ep
-    QScatterDataArray grid = grid_target_error(deg_to_rad(1.0), deg_to_rad(90.0), -deg_to_rad(90.0), deg_to_rad(90.0), deg_to_rad(1.0), v0, P{target_x, target_y, target_h}, ext_params{u, mu, m, dt, h0, h_end});
+    QScatterDataArray grid = grid_target_error(deg_to_rad(1.0), deg_to_rad(90.0), -deg_to_rad(90.0), deg_to_rad(90.0), deg_to_rad(0.5), v0, P{target_x, target_y, target_h}, ext_params{u, mu, m, dt, h0, h_end});
     // struct ext_params{Vec u;float mu;float m;float dt;float h0;float h_end;};
 
 

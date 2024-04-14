@@ -192,15 +192,27 @@ struct grad_params{
 // Функция вычисляет отклонение от целевой точки при заданных параметрах броска
 float target_error(float v0, float alpha, float beta, P target, ext_params ep){
     P r = P(0, 0, ep.h0);
+    AVec k0, k1, k2, k3;
     AVec v = Vec(v0, alpha, beta).to_avec();
-    AVec v_;
+    AVec q0, q1, q2, q3;
+    AVec u = ep.u.to_avec();
     bool cannot_bump=true;
 
     do{
-        r = r + v*(ep.dt);  // Вычисляем дифференциал радиус вектора
+        // Метод Рунге-Кутты 4 порядка
+        k0 = v;
+        q0 = diff_velocity(k0, u, ep.mu, ep.m);
+        k1 = v + q0*(ep.dt/2);
+        q1 = diff_velocity(k1, u, ep.mu, ep.m);
+        k2 = v + q1*(ep.dt/2);
+        q2 = diff_velocity(k2, u, ep.mu, ep.m);
+        k3 = v + q2*(ep.dt);
+        q3 = diff_velocity(k3, u, ep.mu, ep.m);
 
-        v_ = v + (ep.u).to_avec()*(-1); // Скорость относительно воздуха (ветра)
-        v = v + (G + v_*(-(ep.mu)*v_.length()/(ep.m)))*(ep.dt); // Вычисляем дифференциал скорости
+        // Вычисляем новое значение скорости и радиус вектора
+        v = v + (q0 + q1*2 + q2*2 + q3)*(ep.dt/6);
+        r = r + (k0 + k1*2 + k2*2 + k3)*(ep.dt/6);
+
         if (r.z > ep.h_end){
             cannot_bump = false;
         }

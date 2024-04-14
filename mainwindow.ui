@@ -820,6 +820,12 @@
             <height>24</height>
            </size>
           </property>
+          <property name="font">
+           <font>
+            <pointsize>9</pointsize>
+            <italic>true</italic>
+           </font>
+          </property>
           <property name="text">
            <string>grid</string>
           </property>
@@ -2464,7 +2470,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>17</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

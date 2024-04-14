@@ -22,6 +22,7 @@ public:
     float step_alpha=1.0, step_beta=1.0, step_gamma=1.0;
     float range=1.0;
     int animation_counter, animation_launched=0;
+    bool grid_mode=false;
     Q3DScatter *chart;
     QScatter3DSeries *series = new QScatter3DSeries, *start_point = new QScatter3DSeries, *target_point = new QScatter3DSeries;
 
