@@ -100,10 +100,8 @@ void MainWindow::start(bool from_gui_inputs){
     series->setSingleHighlightColor(Qt::green);
     chart->addSeries(series);
 
-//    QTimer *anim_timer = new QTimer(this);
     animation_counter = 0;
-//    connect(anim_timer, SIGNAL(timeout()), this, SLOT(animation()));
-//    anim_timer->start(20);
+    animation_launched += 1;
     QTimer::singleShot(50, this, [this]() { animation(); } );
 
     // Добавляем точку старта на график отдельным цветом
@@ -142,8 +140,9 @@ void MainWindow::start(bool from_gui_inputs){
 
 void MainWindow::animation()
 {
-    if (animation_counter > series->dataProxy()->itemCount()){
+    if (animation_counter > series->dataProxy()->itemCount() || animation_launched > 1){
         series->setSelectedItem(series->dataProxy()->itemCount()-1);
+        animation_launched -= 1;
         return;
     }
     series->setSelectedItem(animation_counter);

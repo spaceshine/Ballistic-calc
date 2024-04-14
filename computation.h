@@ -118,7 +118,6 @@ float deg_to_rad(float deg){
     return deg*PI/180;
 }
 
-
 const static AVec G = AVec(0.0, 0.0, -9.81);
 
 struct Simulation{
@@ -127,20 +126,35 @@ struct Simulation{
     AVec v_end;
 };
 
+AVec diff_velocity(AVec v, AVec u, float mu, float m){
+    AVec v_ = v + u*(-1);
+    return G + v_*(-mu*v_.length()/m);
+}
 
-Simulation compute(Vec v0, Vec u, float mu, float m, float dt, float h0, float h_end=0){
+Simulation compute(Vec v0, Vec u0, float mu, float m, float dt, float h0, float h_end=0){
     P r = P(0, 0, h0);
+    AVec k0, k1, k2, k3;
     AVec v = v0.to_avec();
-    AVec v_;
+    AVec q0, q1, q2, q3;
+    AVec u = u0.to_avec();
     QScatterDataArray data;
     float z_max = 0;
     bool cannot_bump=true;
 
     do{
-        r = r + v*dt;  // Вычисляем дифференциал радиус вектора
+        // Метод Рунге-Кутты 4 порядка
+        k0 = v;
+        q0 = diff_velocity(k0, u, mu, m);
+        k1 = v + q0*(dt/2);
+        q1 = diff_velocity(k1, u, mu, m);
+        k2 = v + q1*(dt/2);
+        q2 = diff_velocity(k2, u, mu, m);
+        k3 = v + q2*(dt);
+        q3 = diff_velocity(k3, u, mu, m);
 
-        v_ = v + u.to_avec()*(-1); // Скорость относительно воздуха (ветра)
-        v = v + (G + v_*(-mu*v_.length()/m))*dt; // Вычисляем дифференциал скорости
+        // Вычисляем новое значение скорости и радиус вектора
+        v = v + (q0 + q1*2 + q2*2 + q3)*(dt/6);
+        r = r + (k0 + k1*2 + k2*2 + k3)*(dt/6);
 
         data << QVector3D(r.x, r.z, r.y); // Особенности Q3DScatter (y -> z)
 
