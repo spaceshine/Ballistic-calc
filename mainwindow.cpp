@@ -71,11 +71,16 @@ void MainWindow::start(bool from_gui_inputs){
     } else{
         h_end = 0.0f;
     }
+
+    ui->progressBar->setValue(10); // progressBar
+
     Simulation result = compute(v, u, mu, m, dt, h0, h_end);
     P end = P(result.data.back().x(), result.data.back().z(), 0.0);
     if (ui->btn_is_user_h->isChecked()){end.z = target_h;}
     AVec v_end = result.v_end;
     float alpha_end = asin(abs(v_end.z/v_end.length()));
+
+    ui->progressBar->setValue(90); // progressBar
 
     ui->label_end->setText("(" + QString::number(end.x, 'f', 1) + ", " + QString::number(end.y, 'f', 1) + ")");
     ui->label_time->setText(QString::number(result.data.size()*dt, 'f', 1));
@@ -135,6 +140,9 @@ void MainWindow::start(bool from_gui_inputs){
     chart->axisZ()->setRange(0, range);
     chart->setAspectRatio(2);
     chart->setHorizontalAspectRatio(2);
+
+    ui->progressBar->setValue(100); // progressBar
+
     chart->show();
 }
 
@@ -218,6 +226,10 @@ void MainWindow::on_precise_gamma_clicked()
     }
 }
 
+void MainWindow::progress(int procents){
+    ui->progressBar->setValue(procents);
+}
+
 
 void MainWindow::on_pushButton_optimal_clicked()
 {
@@ -247,7 +259,12 @@ void MainWindow::on_pushButton_optimal_clicked()
     target_x = ui->edt_target_x->text().toFloat();
     target_y = ui->edt_target_y->text().toFloat();
     target_h = ui->edt_target_h->text().toFloat();
+    if (ui->btn_is_user_h->isChecked()){
+        h_end = target_h;
+    }
     Vec u = Vec(u_value, 0.0, gamma);
+
+    ui->progressBar->setValue(0); // progressBar
 
     ext_params ep;
     ep.dt = dt;
@@ -255,6 +272,7 @@ void MainWindow::on_pushButton_optimal_clicked()
     ep.mu = mu;
     ep.u = u;
     ep.h0 = h0;
+    ep.h_end = h_end;
 
     grad_params gp;
     gp.da = ui->edt_da->text().toFloat();
@@ -263,7 +281,7 @@ void MainWindow::on_pushButton_optimal_clicked()
     gp.stepb = ui->edt_bstep->text().toFloat();
 
     grad_return opt_params;
-    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, target_h), ep);
+    opt_params = gradient_descent(gp, v0, alpha, beta, P(target_x, target_y, target_h), ep, [this](int procents){progress(procents);});
     //std::cout << opt_params.alpha << " " << opt_params.beta << " " << opt_params.func_value << std::endl;
 
     ui->edt_alpha->setValue(rad_to_deg(opt_params.alpha));
@@ -275,5 +293,83 @@ void MainWindow::on_pushButton_optimal_clicked()
     //std::cout << params_string.toStdString() << std::endl;
 
     start(false);
+}
+
+
+void MainWindow::on_btn_grid_clicked()
+{
+    target_x = ui->edt_target_x->text().toFloat();
+    target_y = ui->edt_target_y->text().toFloat();
+    target_h = ui->edt_target_h->text().toFloat();
+
+    // Два способа ввода начальных данных: через пользовательский ввод и через специальную строку параметров (больше точность)
+    if (!ui->btn_optres->isChecked()){
+        h0 = ui->edt_h0->text().toFloat();
+        v0 = ui->edt_v0->text().toFloat();
+        alpha = deg_to_rad(get_alpha());
+        beta = deg_to_rad(get_beta());
+        u_value = ui->edt_u->text().toFloat();
+        gamma = deg_to_rad(get_gamma());
+        mu = ui->edt_mu->text().toFloat();
+        m = ui->edt_m->text().toFloat();
+        dt = ui->edt_dt->text().toFloat();
+    } else {
+        QStringList params_list = ui->edt_optres->text().split(";");
+        h0 = params_list[0].toFloat();
+        v0 = params_list[1].toFloat();
+        alpha = deg_to_rad(params_list[2].toFloat());
+        beta = deg_to_rad(params_list[3].toFloat());
+        u_value = params_list[4].toFloat();
+        gamma = deg_to_rad(params_list[5].toFloat());
+        mu = params_list[6].toFloat();
+        m = params_list[7].toFloat();
+        dt = params_list[8].toFloat();
+    }
+
+    Vec v = Vec(v0, alpha, beta);
+    Vec u = Vec(u_value, 0.0, gamma);
+
+    float h_end;
+    if (ui->btn_is_user_h->isChecked()){
+        h_end = target_h;
+    } else{
+        h_end = 0.0f;
+    }
+
+    ui->progressBar->setValue(10); // progressBar
+
+    // float alpha_min, float alpha_max, float beta_min, float beta_max, float angle_step, float v0, P target, ext_params ep
+    QScatterDataArray grid = grid_target_error(deg_to_rad(1.0), deg_to_rad(90.0), -deg_to_rad(90.0), deg_to_rad(90.0), deg_to_rad(1.0), v0, P{target_x, target_y, target_h}, ext_params{u, mu, m, dt, h0, h_end});
+    // struct ext_params{Vec u;float mu;float m;float dt;float h0;float h_end;};
+
+
+    ui->progressBar->setValue(90); // progressBar
+
+    // Убираем предыдущий график
+    if (! ui->btn_fixed->isChecked()){
+        for (auto ser : chart->seriesList()){
+            chart->removeSeries(ser);
+        }
+    } else {
+        chart->seriesList().at(0)->setBaseColor(Qt::green);
+    }
+
+    // Добавляем точки
+    series = new QScatter3DSeries;
+    series->dataProxy()->addItems(grid);
+    series->setBaseColor(Qt::green);
+    series->setSingleHighlightColor(Qt::red);
+    chart->addSeries(series);
+
+    // Настраиваем оси и показываем график
+//    chart->axisX()->setRange(-range, range);
+//    chart->axisY()->setRange(0, range);
+//    chart->axisZ()->setRange(0, range);
+    chart->setAspectRatio(2);
+    chart->setHorizontalAspectRatio(2);
+
+    ui->progressBar->setValue(100); // progressBar
+
+    chart->show();
 }
 
