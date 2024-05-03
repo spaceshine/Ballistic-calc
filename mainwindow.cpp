@@ -74,7 +74,16 @@ void MainWindow::start(bool from_gui_inputs){
 
     ui->progressBar->setValue(10); // progressBar
 
+    /* ОБЫЧНАЯ РАБОТА
     Simulation result = compute(v, u, mu, m, dt, h0, h_end);
+    P end = P(result.data.back().x(), result.data.back().z(), 0.0);
+    if (ui->btn_is_user_h->isChecked()){end.z = target_h;}
+    AVec v_end = result.v_end;
+    float alpha_end = asin(abs(v_end.z/v_end.length()));
+    */
+
+    // Кубок ЛФИ
+    Simulation result = compute_spherical(v, m, dt, h0);
     P end = P(result.data.back().x(), result.data.back().z(), 0.0);
     if (ui->btn_is_user_h->isChecked()){end.z = target_h;}
     AVec v_end = result.v_end;
@@ -113,7 +122,8 @@ void MainWindow::start(bool from_gui_inputs){
     // Добавляем точку старта на график отдельным цветом
     start_point = new QScatter3DSeries;
     QScatterDataArray start_p_data;
-    start_p_data << QVector3D(0.0, h0, 0.0);
+    //start_p_data << QVector3D(0.0, h0, 0.0); ОБЫЧНАЯ РАБОТА
+    start_p_data << QVector3D(-h0, 0.0, 0.0); // КУБОК ЛФИ
     start_point->setBaseColor(Qt::black);
     start_point->setItemSize(series->itemSize()*1.2f);
     start_point->dataProxy()->addItems(start_p_data);

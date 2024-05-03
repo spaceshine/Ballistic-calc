@@ -172,6 +172,34 @@ Simulation compute(Vec v0, Vec u0, float mu, float m, float dt, float h0, float 
     return Simulation{data, z_max, v};
 }
 
+// Численно пытаемся понять решение 1 эпизода Кубка ЛФИ
+AVec diff_velocity(AVec r, float gcos_a){
+    return r*(-gcos_a/(r.length()*r.length()*r.length()));
+}
+
+Simulation compute_spherical(Vec v0, float gcos_a, float dt, float r0){
+    P r = P(-r0, 0, 0);
+    AVec v = v0.to_avec(), a;
+    v.z = 0;
+    QScatterDataArray data;
+
+    long cnt=0;
+    do{
+        // Метод Рунге-Кутты 4 порядка
+        cnt += 1;
+
+        // Вычисляем новое значение скорости и радиус вектора
+        a = diff_velocity(AVec(r), gcos_a);
+        r = r + v*dt;
+        v = v + a*dt;
+        std::cout << "[" << cnt << "] " << r.x << " " << r.y << " " << r.z << std::endl;
+
+        data << QVector3D(r.x, r.z, r.y); // Особенности Q3DScatter (y -> z)
+    } while((r.y > 0.0) && cnt < 100000);
+
+    return Simulation{data, 0.0, v};
+}
+
 
 struct ext_params{
     Vec u;
